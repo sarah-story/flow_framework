@@ -1,0 +1,163 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>helloworld</groupId>
+    <artifactId>HelloWorld</artifactId>
+    <version>1.0</version>
+    <name>Hello World</name>
+
+    <properties>
+        <target.dir>target</target.dir>
+        <annotations.dir>${target.dir}/generated-sources/annotations</annotations.dir>
+        <aws.version>1.11.35</aws.version>
+        <flow.tools.name>aws-swf-build-tools</flow.tools.name>
+        <flow.tools.version>1.0</flow.tools.version>
+        <freemarker.version>2.3.25-incubating</freemarker.version>
+        <aspectj-runtime.version>1.8.13</aspectj-runtime.version>
+        <aspectj-maven-plugin.version>1.8</aspectj-maven-plugin.version>
+        <compliance.level>1.8</compliance.level>
+    </properties>
+
+    <dependencies>
+        <!-- dependencies for AWS Flow -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk</artifactId>
+            <version>${aws.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>${flow.tools.name}</artifactId>
+            <version>${flow.tools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-configuration</groupId>
+            <artifactId>commons-configuration</artifactId>
+            <version>1.9</version>
+        </dependency>
+
+        <!-- Dependencies for preprocessing SWF's @annotations: -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+            <version>${freemarker.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+            <version>${aspectj-runtime.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- Use a standalone annotation processor -->
+            <plugin>
+                <groupId>com.mysema.maven</groupId>
+                <artifactId>apt-maven-plugin</artifactId>
+                <version>1.1.3</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${annotations.dir}</outputDirectory>
+                            <processor>
+                                com.amazonaws.eclipse.simpleworkflow.asynchrony.annotationprocessor.AsynchronyDeciderAnnotationProcessor
+                            </processor>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.amazonaws</groupId>
+                        <artifactId>${flow.tools.name}</artifactId>
+                        <version>${flow.tools.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>com.amazonaws</groupId>
+                        <artifactId>aws-java-sdk</artifactId>
+                        <version>${aws.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.freemarker</groupId>
+                        <artifactId>freemarker</artifactId>
+                        <version>${freemarker.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.commons</groupId>
+                        <artifactId>commons-lang3</artifactId>
+                        <version>3.3.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+            <!-- Tell Maven NOT to do any annotation processing: -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.2</version>
+                <configuration>
+                    <compilerArgument>-proc:none</compilerArgument>
+                    <compilerArguments>
+                        <Xmaxerrs>5</Xmaxerrs>
+                    </compilerArguments>
+                    <source>${compliance.level}</source>
+                    <target>${compliance.level}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Enable weaving via AspectJ: -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>${aspectj-maven-plugin.version}</version>
+                <dependencies>
+                    <!-- Include this in order to keep aspectjrt consistent across all dependencies: -->
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjtools</artifactId>
+                        <version>${aspectj-runtime.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <complianceLevel>${compliance.level}</complianceLevel>
+                    <showWeaveInfo>true</showWeaveInfo>
+                    <verbose>true</verbose>
+                    <source>${compliance.level}</source>
+                    <target>${compliance.level}</target>
+                    <aspectLibraries>
+                        <aspectLibrary>
+                            <groupId>com.amazonaws</groupId>
+                            <artifactId>aws-java-sdk</artifactId>
+                        </aspectLibrary>
+                        <aspectLibrary>
+                            <groupId>com.amazonaws</groupId>
+                            <artifactId>aws-java-sdk-swf-libraries</artifactId>
+                        </aspectLibrary>
+                    </aspectLibraries>
+                    <sources>
+                        <source>
+                            <basedir>${annotations.dir}</basedir>
+                        </source>
+                    </sources>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal> <!-- use this goal to weave all your main classes -->
+                            <goal>test-compile</goal> <!-- use this goal to weave all your test classes -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>
